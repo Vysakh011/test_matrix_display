@@ -4,14 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MQTT Control & Sensor Data</title>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script> <!-- Include MQTT.js -->
+    <script>
+        if (!localStorage.getItem('loggedInUser')) {
+            window.location.href = 'index.html';
+        }
+    </script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
     <h1>Control NodeMCU via MQTT</h1>
     
     <form id="mqttForm">
-        <label for="message">Enter Message:</label><br>
-        <input type="text" id="message" name="message" required><br><br>
+        <label for="message">Enter Message:</label>
+        <input type="text" id="message" required>
         <button type="submit">Send Message</button>
     </form>
     
@@ -32,15 +37,20 @@
             <td id="condition">--</td>
         </tr>
     </table>
-
-    <button id="logoutButton">Logout</button>
+    
+    <button onclick="logout()" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);">Logout</button>
     
     <script>
+        function logout() {
+            localStorage.removeItem('loggedInUser');
+            window.location.href = 'index.html';
+        }
+        
         // Configuration for MQTT
-        const brokerUrl = "wss://broker.hivemq.com:8884/mqtt"; // WebSocket connection
-        const clientId = "test569ttgg";  // Unique Client ID
-        const commandTopic = "ece/diFJBNOUIFOVSKJIGWIGJ"; // Topic for commands
-        const sensorTopic = "ece/sensorDataujndubd"; // Topic for sensor data
+        const brokerUrl = "wss://broker.hivemq.com:8884/mqtt";
+        const clientId = "test569ttgg";
+        const commandTopic = "ece/diFJBNOUIFOVSKJIGWIGJ";
+        const sensorTopic = "ece/sensorDataujndubd";
 
         // Create MQTT client
         const client = mqtt.connect(brokerUrl, { clientId: clientId, clean: true });
@@ -98,12 +108,6 @@
                     console.log('Clear message sent successfully');
                 }
             });
-        });
-
-        // Logout functionality
-        document.getElementById('logoutButton').addEventListener('click', function () {
-            localStorage.removeItem('loggedInUser');
-            window.location.href = 'login.html';
         });
     </script>
 </body>
