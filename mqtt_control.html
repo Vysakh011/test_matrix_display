@@ -4,19 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MQTT Control & Sensor Data</title>
-    <script>
-        if (!localStorage.getItem('loggedInUser')) {
-            window.location.href = 'index.html';
-        }
-    </script>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script> <!-- Include MQTT.js -->
 </head>
 <body>
     <h1>Control NodeMCU via MQTT</h1>
     
     <form id="mqttForm">
-        <label for="message">Enter Message:</label>
-        <input type="text" id="message" required>
+        <label for="message">Enter Message:</label><br>
+        <input type="text" id="message" name="message" required><br><br>
         <button type="submit">Send Message</button>
     </form>
     
@@ -37,20 +32,21 @@
             <td id="condition">--</td>
         </tr>
     </table>
-    
-    <button onclick="logout()" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);">Logout</button>
-    
+
+    <!-- Logout Button -->
+    <button id="logoutButton" style="position: fixed; bottom: 20px; right: 20px; background-color: red; color: white; padding: 10px 20px; border: none; cursor: pointer;">Logout</button>
+
     <script>
-        function logout() {
-            localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
+        // Check if the user is logged in
+        if (!localStorage.getItem('loggedInUser')) {
+            window.location.href = 'index.html'; // Redirect if not logged in
         }
-        
-        // Configuration for MQTT
-        const brokerUrl = "wss://broker.hivemq.com:8884/mqtt";
-        const clientId = "test569ttgg";
-        const commandTopic = "ece/diFJBNOUIFOVSKJIGWIGJ";
-        const sensorTopic = "ece/sensorDataujndubd";
+
+        // MQTT Configuration
+        const brokerUrl = "wss://broker.hivemq.com:8884/mqtt"; // WebSocket connection
+        const clientId = "test569ttgg";  // Unique Client ID
+        const commandTopic = "ece/diFJBNOUIFOVSKJIGWIGJ"; // Topic for commands
+        const sensorTopic = "ece/sensorDataujndubd"; // Topic for sensor data
 
         // Create MQTT client
         const client = mqtt.connect(brokerUrl, { clientId: clientId, clean: true });
@@ -66,7 +62,7 @@
             });
         });
 
-        // Handle incoming messages
+        // Handle incoming sensor messages
         client.on('message', function (topic, message) {
             if (topic === sensorTopic) {
                 try {
@@ -108,6 +104,12 @@
                     console.log('Clear message sent successfully');
                 }
             });
+        });
+
+        // Logout button functionality
+        document.getElementById('logoutButton').addEventListener('click', function () {
+            localStorage.removeItem('loggedInUser'); // Remove user session
+            window.location.href = 'index.html'; // Redirect to login page
         });
     </script>
 </body>
