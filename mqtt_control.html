@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Control & Sensor Data</title>
+    <script>
+        if (!localStorage.getItem('loggedInUser')) {
+            window.location.href = 'index.html';
+        }
+    </script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body>
+    <h1>Control NodeMCU via MQTT</h1>
+    <button onclick="logout()">Logout</button>
+    
+    <form id="mqttForm">
+        <label for="message">Enter Message:</label>
+        <input type="text" id="message" required>
+        <button type="submit">Send Message</button>
+    </form>
+    
+    <button id="clearButton">CLEAR</button>
+    
+    <h2>Sensor Data</h2>
+    <table border="1">
+        <tr>
+            <th>Temperature (°C)</th>
+            <th>Pressure (hPa)</th>
+            <th>Altitude (m)</th>
+            <th>Condition</th>
+        </tr>
+        <tr>
+            <td id="temp">--</td>
+            <td id="pressure">--</td>
+            <td id="altitude">--</td>
+            <td id="condition">--</td>
+        </tr>
+    </table>
+    
+    <script>
+        function logout() {
+            localStorage.removeItem('loggedInUser');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
