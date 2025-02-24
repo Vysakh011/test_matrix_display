@@ -5,12 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MQTT Control & Sensor Data</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script> <!-- Include MQTT.js -->
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        table { margin: auto; width: 80%; border-collapse: collapse; }
-        th, td { padding: 10px; border: 1px solid black; }
-        #logoutButton { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
-    </style>
 </head>
 <body>
     <h1>Control NodeMCU via MQTT</h1>
@@ -24,7 +18,7 @@
     <button id="clearButton">CLEAR</button>
     
     <h2>Sensor Data</h2>
-    <table>
+    <table border="1">
         <tr>
             <th>Temperature (°C)</th>
             <th>Pressure (hPa)</th>
@@ -39,22 +33,10 @@
         </tr>
     </table>
 
-    <!-- Logout Button -->
     <button id="logoutButton">Logout</button>
-
+    
     <script>
-        // Check if the user is logged in
-        if (!localStorage.getItem('loggedInUser')) {
-            window.location.href = "login.html"; // Redirect to login if not logged in
-        }
-
-        // Logout function
-        document.getElementById('logoutButton').addEventListener('click', function() {
-            localStorage.removeItem('loggedInUser'); // Remove login session
-            window.location.href = "index.html"; // Redirect to login page
-        });
-
-        // MQTT Configuration
+        // Configuration for MQTT
         const brokerUrl = "wss://broker.hivemq.com:8884/mqtt"; // WebSocket connection
         const clientId = "test569ttgg";  // Unique Client ID
         const commandTopic = "ece/diFJBNOUIFOVSKJIGWIGJ"; // Topic for commands
@@ -116,6 +98,12 @@
                     console.log('Clear message sent successfully');
                 }
             });
+        });
+
+        // Logout functionality
+        document.getElementById('logoutButton').addEventListener('click', function () {
+            localStorage.removeItem('loggedInUser');
+            window.location.href = 'login.html';
         });
     </script>
 </body>
