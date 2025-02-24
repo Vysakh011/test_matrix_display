@@ -14,10 +14,9 @@
         <input type="text" id="message" name="message" required><br><br>
         <button type="submit">Send Message</button>
     </form>
-
+    
     <button id="clearButton">CLEAR</button>
-    <button id="logoutButton">Logout</button>
-
+    
     <h2>Sensor Data</h2>
     <table border="1">
         <tr>
@@ -35,21 +34,11 @@
     </table>
 
     <script>
-        // Redirect if user is not logged in
-        if (!localStorage.getItem('loggedInUser')) {
-            window.location.href = "index.html";
-        }
-
-        function logout() {
-            localStorage.removeItem('loggedInUser');
-            window.location.href = "index.html";
-        }
-
-        // MQTT Configuration
+        // Configuration for MQTT
         const brokerUrl = "wss://broker.hivemq.com:8884/mqtt"; // WebSocket connection
-        const clientId = "mqtt_client_" + Math.random().toString(16).substr(2, 8);
-        const commandTopic = "home/command";
-        const sensorTopic = "home/sensorData";
+        const clientId = "test569ttgg";  // Unique Client ID
+        const commandTopic = "ece/diFJBNOUIFOVSKJIGWIGJ"; // Topic for commands
+        const sensorTopic = "ece/sensorDataujndubd"; // Topic for sensor data
 
         // Create MQTT client
         const client = mqtt.connect(brokerUrl, { clientId: clientId, clean: true });
@@ -80,13 +69,12 @@
             }
         });
 
-        // Prevent form reload & send MQTT message
-        document.getElementById('mqttForm').addEventListener('submit', function (event) {
-            event.preventDefault(); // 🚀 **Prevents page reload**
-            const message = document.getElementById('message').value.trim();
-            
-            if (message !== "") {
-                console.log(`Publishing: "${message}" to ${commandTopic}`);
+        // Form submission to send messages
+        document.getElementById('mqttForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const message = document.getElementById('message').value;
+            if (message.trim() !== "") {
+                console.log(`Publishing message: "${message}" to topic: ${commandTopic}`);
                 client.publish(commandTopic, message, { qos: 0, retain: false }, function (error) {
                     if (error) {
                         console.error('Error publishing message:', error);
@@ -94,15 +82,13 @@
                         console.log('Message sent successfully');
                     }
                 });
-
-                document.getElementById('message').value = ""; // Clear input field
             }
         });
 
         // CLEAR button functionality
         document.getElementById('clearButton').addEventListener('click', function () {
             const clearMessage = "CLE@R";
-            console.log(`Publishing: "${clearMessage}" to ${commandTopic}`);
+            console.log(`Publishing message: "${clearMessage}" to topic: ${commandTopic}`);
             client.publish(commandTopic, clearMessage, { qos: 0, retain: false }, function (error) {
                 if (error) {
                     console.error('Error publishing clear message:', error);
@@ -111,9 +97,6 @@
                 }
             });
         });
-
-        // Logout button functionality
-        document.getElementById('logoutButton').addEventListener('click', logout);
     </script>
 </body>
 </html>
