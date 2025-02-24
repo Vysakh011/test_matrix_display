@@ -5,6 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MQTT Control & Sensor Data</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script> <!-- Include MQTT.js -->
+</head>
+<body>
+    <h1>Control NodeMCU via MQTT</h1>
+    
+    <form id="mqttForm">
+        <label for="message">Enter Message:</label><br>
+        <input type="text" id="message" name="message" required><br><br>
+        <button type="submit">Send Message</button>
+    </form>
+
+    <button id="clearButton">CLEAR</button>
+    <button id="logoutButton">Logout</button>
+
+    <h2>Sensor Data</h2>
+    <table border="1">
+        <tr>
+            <th>Temperature (°C)</th>
+            <th>Pressure (hPa)</th>
+            <th>Altitude (m)</th>
+            <th>Condition</th>
+        </tr>
+        <tr>
+            <td id="temp">--</td>
+            <td id="pressure">--</td>
+            <td id="altitude">--</td>
+            <td id="condition">--</td>
+        </tr>
+    </table>
+
     <script>
         // Redirect if user is not logged in
         if (!localStorage.getItem('loggedInUser')) {
@@ -51,9 +80,9 @@
             }
         });
 
-        // Send message without reloading the page
-        function sendMessage(event) {
-            event.preventDefault(); // Prevent page reload
+        // Prevent form reload & send MQTT message
+        document.getElementById('mqttForm').addEventListener('submit', function (event) {
+            event.preventDefault(); // 🚀 **Prevents page reload**
             const message = document.getElementById('message').value.trim();
             
             if (message !== "") {
@@ -68,10 +97,10 @@
 
                 document.getElementById('message').value = ""; // Clear input field
             }
-        }
+        });
 
         // CLEAR button functionality
-        function clearMessage() {
+        document.getElementById('clearButton').addEventListener('click', function () {
             const clearMessage = "CLE@R";
             console.log(`Publishing: "${clearMessage}" to ${commandTopic}`);
             client.publish(commandTopic, clearMessage, { qos: 0, retain: false }, function (error) {
@@ -81,35 +110,10 @@
                     console.log('Clear message sent successfully');
                 }
             });
-        }
+        });
+
+        // Logout button functionality
+        document.getElementById('logoutButton').addEventListener('click', logout);
     </script>
-</head>
-<body>
-    <h1>Control NodeMCU via MQTT</h1>
-    
-    <form id="mqttForm" onsubmit="sendMessage(event)">
-        <label for="message">Enter Message:</label><br>
-        <input type="text" id="message" name="message" required><br><br>
-        <button type="submit">Send Message</button>
-    </form>
-
-    <button onclick="clearMessage()">CLEAR</button>
-    <button onclick="logout()">Logout</button>
-
-    <h2>Sensor Data</h2>
-    <table border="1">
-        <tr>
-            <th>Temperature (°C)</th>
-            <th>Pressure (hPa)</th>
-            <th>Altitude (m)</th>
-            <th>Condition</th>
-        </tr>
-        <tr>
-            <td id="temp">--</td>
-            <td id="pressure">--</td>
-            <td id="altitude">--</td>
-            <td id="condition">--</td>
-        </tr>
-    </table>
 </body>
 </html>
