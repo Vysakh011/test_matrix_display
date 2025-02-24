@@ -4,25 +4,98 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MQTT Control & Sensor Data</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script> <!-- Include MQTT.js -->
     <script>
+        // Redirect if user is not logged in
         if (!localStorage.getItem('loggedInUser')) {
-            window.location.href = 'index.html';
+            window.location.href = "index.html";
+        }
+
+        function logout() {
+            localStorage.removeItem('loggedInUser');
+            window.location.href = "index.html";
+        }
+
+        // MQTT Configuration
+        const brokerUrl = "wss://broker.hivemq.com:8884/mqtt"; // WebSocket connection
+        const clientId = "mqtt_client_" + Math.random().toString(16).substr(2, 8);
+        const commandTopic = "home/command";
+        const sensorTopic = "home/sensorData";
+
+        // Create MQTT client
+        const client = mqtt.connect(brokerUrl, { clientId: clientId, clean: true });
+
+        client.on('connect', function () {
+            console.log('Connected to MQTT broker');
+            client.subscribe(sensorTopic, function (err) {
+                if (err) {
+                    console.error('Failed to subscribe:', err);
+                } else {
+                    console.log(`Subscribed to ${sensorTopic}`);
+                }
+            });
+        });
+
+        // Handle incoming messages
+        client.on('message', function (topic, message) {
+            if (topic === sensorTopic) {
+                try {
+                    const data = JSON.parse(message.toString());
+                    document.getElementById('temp').innerText = data.temperature + " °C";
+                    document.getElementById('pressure').innerText = data.pressure + " hPa";
+                    document.getElementById('altitude').innerText = data.altitude + " m";
+                    document.getElementById('condition').innerText = data.condition;
+                } catch (error) {
+                    console.error("Error parsing sensor data:", error);
+                }
+            }
+        });
+
+        // Send message without reloading the page
+        function sendMessage(event) {
+            event.preventDefault(); // Prevent page reload
+            const message = document.getElementById('message').value.trim();
+            
+            if (message !== "") {
+                console.log(`Publishing: "${message}" to ${commandTopic}`);
+                client.publish(commandTopic, message, { qos: 0, retain: false }, function (error) {
+                    if (error) {
+                        console.error('Error publishing message:', error);
+                    } else {
+                        console.log('Message sent successfully');
+                    }
+                });
+
+                document.getElementById('message').value = ""; // Clear input field
+            }
+        }
+
+        // CLEAR button functionality
+        function clearMessage() {
+            const clearMessage = "CLE@R";
+            console.log(`Publishing: "${clearMessage}" to ${commandTopic}`);
+            client.publish(commandTopic, clearMessage, { qos: 0, retain: false }, function (error) {
+                if (error) {
+                    console.error('Error publishing clear message:', error);
+                } else {
+                    console.log('Clear message sent successfully');
+                }
+            });
         }
     </script>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
     <h1>Control NodeMCU via MQTT</h1>
-    <button onclick="logout()">Logout</button>
     
-    <form id="mqttForm">
-        <label for="message">Enter Message:</label>
-        <input type="text" id="message" required>
+    <form id="mqttForm" onsubmit="sendMessage(event)">
+        <label for="message">Enter Message:</label><br>
+        <input type="text" id="message" name="message" required><br><br>
         <button type="submit">Send Message</button>
     </form>
-    
-    <button id="clearButton">CLEAR</button>
-    
+
+    <button onclick="clearMessage()">CLEAR</button>
+    <button onclick="logout()">Logout</button>
+
     <h2>Sensor Data</h2>
     <table border="1">
         <tr>
@@ -38,12 +111,5 @@
             <td id="condition">--</td>
         </tr>
     </table>
-    
-    <script>
-        function logout() {
-            localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
-        }
-    </script>
 </body>
 </html>
