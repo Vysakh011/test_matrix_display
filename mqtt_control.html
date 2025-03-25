@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MQTT Control & Sensor Data</title>
-    <!-- PWA Meta Tags -->
+    <title>MQTT Control Panel</title>
+    <!-- PWA Configuration -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#6a11cb">
     <meta name="mobile-web-app-capable" content="yes">
@@ -13,211 +13,578 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     <!-- MQTT Library -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <!-- Styles -->
+    <!-- UI Framework -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+        }
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #6a11cb, #2575fc);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
             color: white;
-            text-align: center;
             margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
+            padding: 20px;
+            min-height: 100vh;
         }
         .container {
-            background: white;
-            color: black;
-            max-width: 90%;
-            width: 400px;
-            margin: 30px auto;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 800px;
         }
-        h1 {
-            font-size: 22px;
-            margin-bottom: 10px;
-        }
-        label {
-            font-weight: bold;
-        }
-        #message {
-            width: calc(100% - 20px);
-            padding: 10px;
-            margin-top: 10px;
-            border: 2px solid #ccc;
-            border-radius: 5px;
+        h1, h2 {
+            color: var(--primary-color);
             text-align: center;
-            font-size: 16px;
         }
-        button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        #sendButton {
-            background: #3b82f6;
-            color: white;
-        }
-        #sendButton:hover {
-            background: #2563eb;
-        }
-        #clearButton {
-            background: #f44336;
-            color: white;
-        }
-        #clearButton:hover {
-            background: #d32f2f;
-        }
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th {
-            background: #3b82f6;
-            color: white;
-            padding: 10px;
-        }
-        td {
-            padding: 10px;
-            text-align: center;
-            background: #f9f9f9;
-        }
-        .logout-btn {
-            background: red;
-            color: white;
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            font-size: 14px;
-            padding: 8px 15px;
-            border-radius: 5px;
-            border: none;
-            cursor: pointer;
-            width: auto;
+        .status-indicator {
+            height: 15px;
+            width: 15px;
+            border-radius: 50%;
             display: inline-block;
-        }
-        .logout-btn:hover {
-            background: darkred;
-        }
-        #messageHistory {
-            margin-top: 20px;
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-            background: #f9f9f9;
-            color: black;
-        }
-        #messageHistory h3 {
-            margin-top: 0;
-            color: #3b82f6;
-        }
-        .history-item {
-            padding: 5px;
-            border-bottom: 1px solid #eee;
-            text-align: left;
-        }
-        .history-item:last-child {
-            border-bottom: none;
-        }
-        #connectionStatus {
-            margin-top: 10px;
-            padding: 5px;
-            border-radius: 5px;
-            font-weight: bold;
+            margin-right: 8px;
         }
         .connected {
             background-color: #4CAF50;
-            color: white;
         }
         .disconnected {
             background-color: #f44336;
-            color: white;
         }
-        #installBtn {
-            display: none;
-            background: #4CAF50;
-            margin: 10px 0;
+        .broker-selector {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f8f9fa;
         }
-        @media (max-width: 600px) {
+        #messageHistory {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .history-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .sensor-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        #sensorChart {
+            width: 100%;
+            height: 300px;
+            margin-top: 20px;
+        }
+        @media (max-width: 768px) {
             .container {
-                max-width: 95%;
-                width: auto;
                 padding: 15px;
             }
-            h1 {
-                font-size: 20px;
-            }
-            button {
-                font-size: 14px;
-                padding: 8px;
-            }
-            .logout-btn {
-                font-size: 12px;
-                padding: 8px 12px;
-                bottom: 15px;
-                right: 15px;
+            .sensor-value {
+                font-size: 1rem;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Message via MQTT</h1>
-        <div id="connectionStatus" class="disconnected">Disconnected</div>
+        <h1 class="mb-4">MQTT Control Panel</h1>
         
-        <form id="mqttForm">
-            <label for="message">Enter Message:</label>
-            <input type="text" id="message" name="message" required>
-            <button type="submit" id="sendButton">Send Message</button>
-        </form>
-
-        <button id="installBtn">Install App</button>
-        <button id="clearButton">CLEAR</button>
-
-        <div id="messageHistory">
-            <h3>Message History</h3>
-            <!-- History items will be added here dynamically -->
+        <!-- Connection Status -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span id="connectionStatus" class="status-indicator disconnected"></span>
+                        <span id="connectionText">Disconnected</span>
+                    </div>
+                    <button id="reconnectBtn" class="btn btn-sm btn-outline-primary">Reconnect</button>
+                </div>
+            </div>
         </div>
 
-        <h2>Sensor Data</h2>
-        <table>
-            <tr>
-                <th>Temperature (°C)</th>
-                <th>Pressure (hPa)</th>
-                <th>Altitude (m)</th>
-                <th>Weather</th>
-            </tr>
-            <tr>
-                <td id="temp">--</td>
-                <td id="pressure">--</td>
-                <td id="altitude">--</td>
-                <td id="weather">--</td>
-            </tr>
-        </table>
+        <!-- Broker Selection -->
+        <div class="broker-selector">
+            <h3 class="h5">Broker Selection</h3>
+            <div class="form-group">
+                <select id="brokerSelect" class="form-select">
+                    <option value="0">HiveMQ</option>
+                    <option value="1">Mosquitto</option>
+                    <option value="2">Eclipse</option>
+                </select>
+            </div>
+            <div class="mt-2">
+                <small class="text-muted" id="currentBrokerInfo">Currently connected to: None</small>
+            </div>
+        </div>
+
+        <!-- Message Control -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h2 class="h4">Message Control</h2>
+                <form id="mqttForm">
+                    <div class="form-group mb-3">
+                        <label for="messageInput">Message to Send:</label>
+                        <input type="text" class="form-control" id="messageInput" placeholder="Enter your message">
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary me-md-2" id="sendBtn">Send Message</button>
+                        <button type="button" class="btn btn-danger" id="clearBtn">Clear Display</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Message History -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h2 class="h4">Message History</h2>
+                <div id="messageHistory"></div>
+            </div>
+        </div>
+
+        <!-- Sensor Data -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h2 class="h4">Sensor Data</h2>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Temperature</td>
+                                <td class="sensor-value" id="tempValue">--</td>
+                                <td id="tempTime">--</td>
+                            </tr>
+                            <tr>
+                                <td>Pressure</td>
+                                <td class="sensor-value" id="pressureValue">--</td>
+                                <td id="pressureTime">--</td>
+                            </tr>
+                            <tr>
+                                <td>Altitude</td>
+                                <td class="sensor-value" id="altitudeValue">--</td>
+                                <td id="altitudeTime">--</td>
+                            </tr>
+                            <tr>
+                                <td>Weather Condition</td>
+                                <td class="sensor-value" id="weatherValue">--</td>
+                                <td id="weatherTime">--</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Container -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h2 class="h4">Sensor Data History</h2>
+                <canvas id="sensorChart"></canvas>
+            </div>
+        </div>
     </div>
 
-    <button id="logoutButton" class="logout-btn">Logout</button>
+    <!-- Logout Button -->
+    <button id="logoutBtn" class="btn btn-danger position-fixed bottom-0 end-0 m-3">Logout</button>
 
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Check authentication
-        if (!localStorage.getItem('loggedInUser')) {
-            window.location.href = 'index.html';
+        // MQTT Configuration
+        const brokerConfigs = [
+            { 
+                id: 0,
+                name: "HiveMQ",
+                wsUrl: "wss://broker.hivemq.com:8884/mqtt",
+                tcpUrl: "broker.hivemq.com",
+                tcpPort: 1883
+            },
+            { 
+                id: 1,
+                name: "Mosquitto",
+                wsUrl: "wss://test.mosquitto.org:8081/mqtt",
+                tcpUrl: "test.mosquitto.org",
+                tcpPort: 1883
+            },
+            { 
+                id: 2,
+                name: "Eclipse",
+                wsUrl: "wss://mqtt.eclipseprojects.io:443/mqtt",
+                tcpUrl: "mqtt.eclipseprojects.io",
+                tcpPort: 443
+            }
+        ];
+
+        // Topics
+        const commandTopic = "ece/diFJBNOUIFOVSKJIGWIGJ";
+        const sensorTopic = "ece/sensorDataujndubd";
+        const brokerSyncTopic = "ece/brokerSync";
+
+        // Global Variables
+        let client = null;
+        let currentBrokerIndex = 0;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 3;
+        const messageHistory = [];
+        const sensorDataHistory = [];
+        let sensorChart = null;
+
+        // DOM Elements
+        const connectionStatus = document.getElementById('connectionStatus');
+        const connectionText = document.getElementById('connectionText');
+        const brokerSelect = document.getElementById('brokerSelect');
+        const currentBrokerInfo = document.getElementById('currentBrokerInfo');
+        const messageInput = document.getElementById('messageInput');
+        const messageHistoryDiv = document.getElementById('messageHistory');
+        const reconnectBtn = document.getElementById('reconnectBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // Initialize Chart
+        function initializeChart() {
+            const ctx = document.getElementById('sensorChart').getContext('2d');
+            sensorChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Temperature (°C)',
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.1,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Pressure (hPa)',
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Temperature (°C)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Pressure (hPa)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
         }
 
-        // Register service worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
+        // Update Connection Status UI
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                connectionStatus.className = 'status-indicator connected';
+                connectionText.textContent = `Connected to ${brokerConfigs[currentBrokerIndex].name}`;
+                currentBrokerInfo.textContent = `Currently connected to: ${brokerConfigs[currentBrokerIndex].name}`;
+            } else {
+                connectionStatus.className = 'status-indicator disconnected';
+                connectionText.textContent = 'Disconnected';
+                currentBrokerInfo.textContent = 'Currently connected to: None';
+            }
+        }
+
+        // Add Message to History
+        function addToHistory(message, isIncoming = false) {
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString();
+            
+            messageHistory.unshift({
+                message,
+                timestamp,
+                isIncoming
+            });
+            
+            // Keep only the last 50 messages
+            if (messageHistory.length > 50) {
+                messageHistory.pop();
+            }
+            
+            // Update UI
+            renderMessageHistory();
+        }
+
+        // Render Message History
+        function renderMessageHistory() {
+            messageHistoryDiv.innerHTML = '';
+            
+            if (messageHistory.length === 0) {
+                messageHistoryDiv.innerHTML = '<div class="text-muted text-center py-3">No messages yet</div>';
+                return;
+            }
+            
+            messageHistory.forEach(item => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `history-item ${item.isIncoming ? 'incoming' : 'outgoing'}`;
+                
+                const direction = item.isIncoming ? 'Received' : 'Sent';
+                messageDiv.innerHTML = `
+                    <strong>[${item.timestamp}] ${direction}:</strong> ${item.message}
+                `;
+                
+                messageHistoryDiv.appendChild(messageDiv);
+            });
+        }
+
+        // Update Sensor Data
+        function updateSensorData(data) {
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString();
+            
+            // Update table values
+            document.getElementById('tempValue').textContent = data.temperature ? `${data.temperature.toFixed(1)} °C` : "--";
+            document.getElementById('pressureValue').textContent = data.pressure ? `${data.pressure.toFixed(1)} hPa` : "--";
+            document.getElementById('altitudeValue').textContent = data.altitude ? `${data.altitude.toFixed(1)} m` : "--";
+            document.getElementById('weatherValue').textContent = data.weather || "--";
+            
+            document.getElementById('tempTime').textContent = timestamp;
+            document.getElementById('pressureTime').textContent = timestamp;
+            document.getElementById('altitudeTime').textContent = timestamp;
+            document.getElementById('weatherTime').textContent = timestamp;
+            
+            // Add to history
+            sensorDataHistory.unshift({
+                ...data,
+                timestamp: now
+            });
+            
+            // Keep only the last 50 readings
+            if (sensorDataHistory.length > 50) {
+                sensorDataHistory.pop();
+            }
+            
+            // Update chart
+            updateChart();
+        }
+
+        // Update Chart Data
+        function updateChart() {
+            if (!sensorChart) return;
+            
+            const labels = sensorDataHistory.map(item => item.timestamp).reverse();
+            const tempData = sensorDataHistory.map(item => item.temperature).reverse();
+            const pressureData = sensorDataHistory.map(item => item.pressure).reverse();
+            
+            sensorChart.data.labels = labels;
+            sensorChart.data.datasets[0].data = tempData;
+            sensorChart.data.datasets[1].data = pressureData;
+            sensorChart.update();
+        }
+
+        // Connect to MQTT Broker
+        function connectToBroker() {
+            // Disconnect if already connected
+            if (client && client.connected) {
+                client.end();
+            }
+            
+            currentBrokerIndex = parseInt(brokerSelect.value);
+            const broker = brokerConfigs[currentBrokerIndex];
+            
+            console.log(`Attempting to connect to ${broker.name} (${broker.wsUrl})`);
+            updateConnectionStatus(false);
+            
+            // Create client
+            client = mqtt.connect(broker.wsUrl, {
+                clientId: "webclient_" + Math.random().toString(16).substr(2, 8),
+                clean: true,
+                reconnectPeriod: 2000,
+                connectTimeout: 5000
+            });
+            
+            // Event handlers
+            client.on('connect', () => {
+                console.log(`Connected to ${broker.name}`);
+                updateConnectionStatus(true);
+                reconnectAttempts = 0;
+                
+                // Subscribe to topics
+                client.subscribe(sensorTopic, (err) => {
+                    if (err) {
+                        console.error('Failed to subscribe to sensor topic:', err);
+                    } else {
+                        console.log(`Subscribed to ${sensorTopic}`);
+                    }
+                });
+                
+                client.subscribe(brokerSyncTopic, (err) => {
+                    if (err) {
+                        console.error('Failed to subscribe to sync topic:', err);
+                    }
+                });
+                
+                // Publish current broker info
+                const syncMessage = JSON.stringify({
+                    brokerIndex: currentBrokerIndex,
+                    brokerName: broker.name,
+                    timestamp: new Date().toISOString()
+                });
+                client.publish(brokerSyncTopic, syncMessage, { qos: 1 });
+                
+                addToHistory(`Connected to ${broker.name} broker`, true);
+            });
+            
+            client.on('message', (topic, message) => {
+                const msgString = message.toString();
+                console.log(`Message received on ${topic}: ${msgString}`);
+                
+                if (topic === sensorTopic) {
+                    try {
+                        const data = JSON.parse(msgString);
+                        updateSensorData(data);
+                        addToHistory(`Sensor update: ${data.temperature}°C, ${data.pressure}hPa`, true);
+                    } catch (e) {
+                        console.error('Error parsing sensor data:', e);
+                    }
+                } else if (topic === brokerSyncTopic) {
+                    try {
+                        const syncData = JSON.parse(msgString);
+                        console.log('Received sync message:', syncData);
+                        
+                        if (syncData.brokerIndex !== undefined && 
+                            syncData.brokerIndex !== currentBrokerIndex &&
+                            syncData.brokerIndex >= 0 && 
+                            syncData.brokerIndex < brokerConfigs.length) {
+                            
+                            console.log(`Sync request to switch to broker index ${syncData.brokerIndex}`);
+                            brokerSelect.value = syncData.brokerIndex;
+                            connectToBroker();
+                        }
+                    } catch (e) {
+                        console.error('Error parsing sync message:', e);
+                    }
+                }
+            });
+            
+            client.on('error', (err) => {
+                console.error('MQTT Error:', err);
+                updateConnectionStatus(false);
+                addToHistory(`Connection error: ${err.message}`, true);
+            });
+            
+            client.on('close', () => {
+                console.log('Connection closed');
+                updateConnectionStatus(false);
+                addToHistory('Disconnected from broker', true);
+            });
+            
+            client.on('offline', () => {
+                console.log('Client offline');
+                updateConnectionStatus(false);
+                reconnectAttempts++;
+                
+                if (reconnectAttempts >= maxReconnectAttempts) {
+                    console.log(`Max reconnect attempts reached for ${broker.name}`);
+                    addToHistory(`Max reconnect attempts reached. Trying next broker.`, true);
+                    
+                    // Try next broker
+                    currentBrokerIndex = (currentBrokerIndex + 1) % brokerConfigs.length;
+                    brokerSelect.value = currentBrokerIndex;
+                    reconnectAttempts = 0;
+                    setTimeout(connectToBroker, 2000);
+                }
+            });
+        }
+
+        // Initialize Application
+        function init() {
+            // Check authentication
+            if (!localStorage.getItem('loggedInUser')) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Initialize UI
+            initializeChart();
+            updateConnectionStatus(false);
+            
+            // Form submission
+            document.getElementById('mqttForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const message = messageInput.value.trim();
+                
+                if (message && client && client.connected) {
+                    client.publish(commandTopic, message, { qos: 0 });
+                    addToHistory(message);
+                    messageInput.value = '';
+                } else {
+                    alert('Not connected to MQTT broker!');
+                }
+            });
+            
+            // Clear button
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                if (client && client.connected) {
+                    client.publish(commandTopic, "CLE@R", { qos: 0 });
+                    addToHistory("CLEAR (Display Reset)");
+                } else {
+                    alert('Not connected to MQTT broker!');
+                }
+            });
+            
+            // Broker selection change
+            brokerSelect.addEventListener('change', () => {
+                connectToBroker();
+            });
+            
+            // Reconnect button
+            reconnectBtn.addEventListener('click', () => {
+                connectToBroker();
+            });
+            
+            // Logout button
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('loggedInUser');
+                window.location.href = 'index.html';
+            });
+            
+            // Initial connection
+            connectToBroker();
+            
+            // Register service worker for PWA
+            if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
                         console.log('ServiceWorker registration successful');
@@ -225,207 +592,11 @@
                     .catch(err => {
                         console.log('ServiceWorker registration failed: ', err);
                     });
-            });
+            }
         }
 
-        // Install prompt handling
-        let deferredPrompt;
-        const installBtn = document.getElementById('installBtn');
-        
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.style.display = 'block';
-            
-            installBtn.addEventListener('click', () => {
-                installBtn.style.display = 'none';
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted install prompt');
-                    }
-                    deferredPrompt = null;
-                });
-            });
-        });
-
-        // MQTT Configuration
-        const brokerConfigs = [
-            { 
-                name: "HiveMQ",
-                wsUrl: "wss://broker.hivemq.com:8884/mqtt",
-                tcpUrl: "broker.hivemq.com",
-                tcpPort: 1883
-            },
-            { 
-                name: "Mosquitto",
-                wsUrl: "wss://test.mosquitto.org:8081/mqtt",
-                tcpUrl: "test.mosquitto.org",
-                tcpPort: 1883
-            },
-            { 
-                name: "Eclipse",
-                wsUrl: "wss://mqtt.eclipseprojects.io:443/mqtt",
-                tcpUrl: "mqtt.eclipseprojects.io",
-                tcpPort: 443
-            }
-        ];
-        
-        let currentBrokerIndex = 0;
-        let reconnectAttempts = 0;
-        const maxReconnectAttempts = 3;
-        
-        const clientId = "webclient_" + Math.random().toString(16).substr(2, 8);
-        const commandTopic = "ece/diFJBNOUIFOVSKJIGWIGJ";
-        const sensorTopic = "ece/sensorDataujndubd";
-        const brokerSyncTopic = "ece/brokerSync";
-        const messageHistory = [];
-        
-        let client = null;
-        let currentBroker = null;
-        
-        function updateConnectionStatus(connected) {
-            const statusElement = document.getElementById('connectionStatus');
-            statusElement.textContent = connected ? 
-                `Connected to ${currentBroker.name}` : 'Disconnected';
-            statusElement.className = connected ? 'connected' : 'disconnected';
-        }
-        
-        function connectToBroker() {
-            if (currentBrokerIndex >= brokerConfigs.length) {
-                currentBrokerIndex = 0; // Wrap around to first broker
-                reconnectAttempts = 0;
-            }
-            
-            currentBroker = brokerConfigs[currentBrokerIndex];
-            console.log(`Attempting to connect to ${currentBroker.name} (${currentBroker.wsUrl})`);
-            updateConnectionStatus(false);
-            
-            if (client) {
-                client.end(); // Clean up previous connection
-            }
-            
-            client = mqtt.connect(currentBroker.wsUrl, {
-                clientId: clientId,
-                clean: false,
-                reconnectPeriod: 1000
-            });
-            
-            client.on('connect', function () {
-                console.log(`Connected to ${currentBroker.name}`);
-                updateConnectionStatus(true);
-                reconnectAttempts = 0;
-                
-                // Subscribe to sensor topic
-                client.subscribe(sensorTopic, function (err) {
-                    if (err) {
-                        console.error('Failed to subscribe:', err);
-                    } else {
-                        console.log(`Subscribed to ${sensorTopic}`);
-                    }
-                });
-                
-                // Publish which broker we're connected to
-                const syncMessage = JSON.stringify({
-                    brokerIndex: currentBrokerIndex,
-                    brokerName: currentBroker.name,
-                    timestamp: new Date().toISOString()
-                });
-                client.publish(brokerSyncTopic, syncMessage, { qos: 1 });
-            });
-            
-            client.on('message', function (topic, message) {
-                if (topic === sensorTopic) {
-                    try {
-                        const data = JSON.parse(message.toString());
-                        console.log("Received Sensor Data:", data);
-
-                        document.getElementById('temp').innerText = data.temperature ? `${data.temperature.toFixed(1)} °C` : "--";
-                        document.getElementById('pressure').innerText = data.pressure ? `${data.pressure.toFixed(1)} hPa` : "--";
-                        document.getElementById('altitude').innerText = data.altitude ? `${data.altitude.toFixed(1)} m` : "--";
-                        document.getElementById('weather').innerText = data.weather || "--";
-
-                    } catch (error) {
-                        console.error("Error parsing sensor data:", error);
-                    }
-                }
-            });
-            
-            client.on('error', function (error) {
-                console.error("MQTT Error:", error);
-                updateConnectionStatus(false);
-            });
-            
-            client.on('close', function () {
-                console.log("Connection closed");
-                updateConnectionStatus(false);
-            });
-            
-            client.on('offline', function () {
-                console.log("Client offline");
-                updateConnectionStatus(false);
-                reconnectAttempts++;
-                
-                if (reconnectAttempts >= maxReconnectAttempts) {
-                    console.log(`Max attempts reached for ${currentBroker.name}. Trying next broker.`);
-                    currentBrokerIndex++;
-                    reconnectAttempts = 0;
-                    setTimeout(connectToBroker, 5000);
-                }
-            });
-        }
-        
-        function addToHistory(message) {
-            const now = new Date();
-            const timestamp = now.toLocaleTimeString();
-            messageHistory.unshift({message, timestamp});
-            
-            const historyContainer = document.getElementById('messageHistory');
-            historyContainer.innerHTML = '<h3>Message History</h3>';
-            
-            messageHistory.forEach(item => {
-                const historyItem = document.createElement('div');
-                historyItem.className = 'history-item';
-                historyItem.innerHTML = `<strong>[${item.timestamp}]</strong> ${item.message}`;
-                historyContainer.appendChild(historyItem);
-            });
-        }
-
-        // Initial connection
-        connectToBroker();
-
-        // Form submission handler
-        document.getElementById('mqttForm').addEventListener('submit', function (e) {
-            e.preventDefault();
-            const messageInput = document.getElementById('message');
-            const message = messageInput.value.trim();
-            
-            if (message !== "" && client && client.connected) {
-                client.publish(commandTopic, message, { qos: 0, retain: false });
-                addToHistory(message);
-                messageInput.value = "";
-            } else {
-                alert("Not connected to MQTT broker. Please wait...");
-            }
-        });
-
-        // Clear button handler
-        document.getElementById('clearButton').addEventListener('click', function () {
-            const clearMessage = "CLE@R";
-            if (client && client.connected) {
-                client.publish(commandTopic, clearMessage, { qos: 0, retain: false });
-                addToHistory("CLEAR (Display Reset)");
-                document.getElementById('message').value = "";
-            } else {
-                alert("Not connected to MQTT broker. Please wait...");
-            }
-        });
-
-        // Logout button handler
-        document.getElementById('logoutButton').addEventListener('click', function () {
-            localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
-        });
+        // Start the application
+        init();
     </script>
 </body>
 </html>
