@@ -73,6 +73,49 @@
         a:hover {
             text-decoration: underline;
         }
+        .google-btn {
+            background: #4285F4;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            width: 100%;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .google-btn:hover {
+            background: #357ABD;
+        }
+        .google-icon {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+        }
+        .or-divider {
+            margin: 15px 0;
+            text-align: center;
+            position: relative;
+            color: #777;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: #ddd;
+        }
+        .or-divider::before {
+            left: 0;
+        }
+        .or-divider::after {
+            right: 0;
+        }
     </style>
     <script>
         // Initialize Firebase
@@ -106,6 +149,17 @@
                     alert(errorMessage);
                 });
         }
+
+        function googleSignIn() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    // Signed in
+                    window.location.href = 'mqtt_control.html';
+                }).catch((error) => {
+                    alert(error.message);
+                });
+        }
     </script>
 </head>
 <body>
@@ -114,6 +168,11 @@
         <input type="email" id="username" placeholder="Email" required>
         <input type="password" id="password" placeholder="Password" required>
         <button onclick="register()">Register</button>
+        <div class="or-divider">OR</div>
+        <button class="google-btn" onclick="googleSignIn()">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" class="google-icon" alt="Google logo">
+            Sign up with Google
+        </button>
         <p>Already have an account? <a href="index.html">Login</a></p>
     </div>
 
