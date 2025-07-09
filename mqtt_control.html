@@ -343,7 +343,7 @@
 
     document.getElementById('clearButton').addEventListener('click', () => {
       if (client && client.connected) {
-        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", `CLE@R | Broker: ${currentBrokerName}`);
+        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", `CLE@R`);
         document.getElementById('message').value = "";
       } else {
         alert("Not connected to MQTT broker.");
