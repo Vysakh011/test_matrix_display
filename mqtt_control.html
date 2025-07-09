@@ -14,7 +14,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    /* [style unchanged from original code] */
+    /* [unchanged styles omitted for brevity — all your original styles stay untouched] */
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(to right, #6a11cb, #2575fc);
@@ -243,21 +243,16 @@
     const auth = firebase.auth();
 
     auth.onAuthStateChanged((user) => {
-      if (!user) {
-        window.location.href = 'index.html';
-      }
+      if (!user) window.location.href = 'index.html';
     });
 
-    const brokerConfigs = [{
-      name: "Mosquitto",
-      wsUrl: "wss://test.mosquitto.org:8081/mqtt",
-      tcpUrl: "test.mosquitto.org",
-      tcpPort: 1883
-    }];
+    const brokerConfigs = {
+      "Mosquitto": { name: "Mosquitto", wsUrl: "wss://test.mosquitto.org:8081/mqtt" },
+      "HiveMQ": { name: "HiveMQ", wsUrl: "wss://broker.hivemq.com:8884/mqtt" }
+    };
 
     let client = null;
-    let currentBroker = brokerConfigs[0];
-
+    let currentBrokerName = null;
     let lastSensorMessageTime = Date.now();
     const SENSOR_TIMEOUT_MS = 20000;
 
@@ -267,11 +262,14 @@
       statusElement.className = connected ? 'connected' : 'disconnected';
     }
 
-    function connectToBroker() {
-      updateConnectionStatus(false);
-      if (client) client.end();
+    function connectToBrokerByName(brokerName) {
+      if (!brokerConfigs[brokerName]) return console.error("Unknown broker:", brokerName);
 
-      client = mqtt.connect(currentBroker.wsUrl, {
+      if (client) client.end(true);
+      const broker = brokerConfigs[brokerName];
+      currentBrokerName = brokerName;
+
+      client = mqtt.connect(broker.wsUrl, {
         clientId: "webclient_" + Math.random().toString(16).substr(2, 8),
         clean: false,
         reconnectPeriod: 1000
@@ -285,7 +283,6 @@
       client.on('message', (topic, message) => {
         if (topic === "ece/sensorDataujndubd") {
           lastSensorMessageTime = Date.now();
-
           const raw = message.toString();
           const parts = raw.split("|").map(p => p.trim());
 
@@ -295,6 +292,8 @@
           const weather = parts[3];
           const wifiStatus = parts[4]?.includes("Connected");
           const mqttStatus = parts[5]?.includes("Connected");
+          const brokerField = parts.find(p => p.startsWith("Broker:"));
+          const brokerFromPayload = brokerField?.split(":")[1]?.trim();
 
           document.getElementById("temp").innerText = isNaN(temp) ? "--" : `${temp.toFixed(1)} °C`;
           document.getElementById("pressure").innerText = isNaN(press) ? "--" : `${press.toFixed(1)} hPa`;
@@ -308,6 +307,11 @@
           const mqttBox = document.getElementById("boardMQTTStatus");
           mqttBox.textContent = mqttStatus ? "Device MQTT Connected" : "Device MQTT Disconnected";
           mqttBox.className = mqttStatus ? "status-box status-connected" : "status-box status-disconnected";
+
+          if (brokerFromPayload && brokerFromPayload !== currentBrokerName) {
+            console.log(`Switching broker to: ${brokerFromPayload}`);
+            connectToBrokerByName(brokerFromPayload);
+          }
         }
       });
 
@@ -315,17 +319,14 @@
       client.on('offline', () => updateConnectionStatus(false));
     }
 
-    connectToBroker();
+    connectToBrokerByName("Mosquitto");
 
     setInterval(() => {
       if (Date.now() - lastSensorMessageTime > SENSOR_TIMEOUT_MS) {
-        const wifiBox = document.getElementById("boardWiFiStatus");
-        wifiBox.textContent = "Device WiFi Disconnected";
-        wifiBox.className = "status-box status-disconnected";
-
-        const mqttBox = document.getElementById("boardMQTTStatus");
-        mqttBox.textContent = "Device MQTT Disconnected";
-        mqttBox.className = "status-box status-disconnected";
+        document.getElementById("boardWiFiStatus").textContent = "Device WiFi Disconnected";
+        document.getElementById("boardWiFiStatus").className = "status-box status-disconnected";
+        document.getElementById("boardMQTTStatus").textContent = "Device MQTT Disconnected";
+        document.getElementById("boardMQTTStatus").className = "status-box status-disconnected";
       }
     }, 5000);
 
@@ -333,7 +334,7 @@
       e.preventDefault();
       const message = document.getElementById('message').value.trim();
       if (message && client && client.connected) {
-        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", message);
+        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", `${message} | Broker: ${currentBrokerName}`);
         document.getElementById('message').value = "";
       } else {
         alert("Not connected to MQTT broker.");
@@ -342,7 +343,7 @@
 
     document.getElementById('clearButton').addEventListener('click', () => {
       if (client && client.connected) {
-        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", "CLE@R");
+        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", `CLE@R | Broker: ${currentBrokerName}`);
         document.getElementById('message').value = "";
       } else {
         alert("Not connected to MQTT broker.");
