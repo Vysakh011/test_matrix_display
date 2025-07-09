@@ -14,6 +14,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
+    /* [style unchanged from original code] */
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(to right, #6a11cb, #2575fc);
@@ -143,8 +144,6 @@
       background-color: #f44336;
       color: white;
     }
-
-    /* Board status boxes */
     #boardStatusContainer {
       margin-top: 10px;
     }
@@ -162,7 +161,6 @@
       background-color: #f44336;
       color: white;
     }
-
     #installBtn {
       display: none;
       background: #4CAF50;
@@ -195,7 +193,6 @@
     <h1>Message via MQTT</h1>
     <div id="connectionStatus" class="disconnected">Disconnected</div>
 
-    <!-- Device status boxes -->
     <div id="boardStatusContainer">
       <div id="boardWiFiStatus" class="status-box status-disconnected">Device WiFi Disconnected</div>
       <div id="boardMQTTStatus" class="status-box status-disconnected">Device MQTT Disconnected</div>
@@ -261,6 +258,9 @@
     let client = null;
     let currentBroker = brokerConfigs[0];
 
+    let lastSensorMessageTime = Date.now();
+    const SENSOR_TIMEOUT_MS = 20000;
+
     function updateConnectionStatus(connected) {
       const statusElement = document.getElementById('connectionStatus');
       statusElement.textContent = connected ? "App Connected to MQTT" : "Disconnected";
@@ -284,6 +284,8 @@
 
       client.on('message', (topic, message) => {
         if (topic === "ece/sensorDataujndubd") {
+          lastSensorMessageTime = Date.now();
+
           const raw = message.toString();
           const parts = raw.split("|").map(p => p.trim());
 
@@ -314,6 +316,18 @@
     }
 
     connectToBroker();
+
+    setInterval(() => {
+      if (Date.now() - lastSensorMessageTime > SENSOR_TIMEOUT_MS) {
+        const wifiBox = document.getElementById("boardWiFiStatus");
+        wifiBox.textContent = "Device WiFi Disconnected";
+        wifiBox.className = "status-box status-disconnected";
+
+        const mqttBox = document.getElementById("boardMQTTStatus");
+        mqttBox.textContent = "Device MQTT Disconnected";
+        mqttBox.className = "status-box status-disconnected";
+      }
+    }, 5000);
 
     document.getElementById('mqttForm').addEventListener('submit', function (e) {
       e.preventDefault();
