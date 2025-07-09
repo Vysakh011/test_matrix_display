@@ -334,7 +334,7 @@
       e.preventDefault();
       const message = document.getElementById('message').value.trim();
       if (message && client && client.connected) {
-        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", `${message} | Broker: ${currentBrokerName}`);
+        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", `${message}`);
         document.getElementById('message').value = "";
       } else {
         alert("Not connected to MQTT broker.");
