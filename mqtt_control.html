@@ -1,3 +1,4 @@
+<!-- FULL CODE  -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +15,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    /* [unchanged styles omitted for brevity — all your original styles stay untouched] */
+    /* [ALL YOUR ORIGINAL STYLES — UNCHANGED] */
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(to right, #6a11cb, #2575fc);
@@ -251,8 +252,8 @@
       "HiveMQ": { name: "HiveMQ", wsUrl: "wss://broker.hivemq.com:8884/mqtt" }
     };
 
-    let client = null;
-    let currentBrokerName = null;
+    let clients = {};
+    let currentActiveBroker = null;
     let lastSensorMessageTime = Date.now();
     const SENSOR_TIMEOUT_MS = 20000;
 
@@ -262,38 +263,37 @@
       statusElement.className = connected ? 'connected' : 'disconnected';
     }
 
-    function connectToBrokerByName(brokerName) {
-      if (!brokerConfigs[brokerName]) return console.error("Unknown broker:", brokerName);
+    function getActiveClient() {
+      return currentActiveBroker ? clients[currentActiveBroker] : null;
+    }
 
-      if (client) client.end(true);
-      const broker = brokerConfigs[brokerName];
-      currentBrokerName = brokerName;
+    function setupAllBrokers() {
+      Object.entries(brokerConfigs).forEach(([brokerName, config]) => {
+        const client = mqtt.connect(config.wsUrl, {
+          clientId: brokerName + "_" + Math.random().toString(16).substr(2, 8),
+          clean: true,
+          reconnectPeriod: 1000,
+        });
 
-      client = mqtt.connect(broker.wsUrl, {
-        clientId: "webclient_" + Math.random().toString(16).substr(2, 8),
-        clean: false,
-        reconnectPeriod: 1000
-      });
+        clients[brokerName] = client;
 
-      client.on('connect', () => {
-        updateConnectionStatus(true);
-        client.subscribe("ece/sensorDataujndubd");
-      });
+        client.on("connect", () => {
+          client.subscribe("ece/sensorDataujndubd");
+        });
 
-      client.on('message', (topic, message) => {
-        if (topic === "ece/sensorDataujndubd") {
+        client.on("message", (topic, message) => {
+          if (topic !== "ece/sensorDataujndubd") return;
+
           lastSensorMessageTime = Date.now();
-          const raw = message.toString();
-          const parts = raw.split("|").map(p => p.trim());
+          currentActiveBroker = brokerName;
 
+          const parts = message.toString().split("|").map(p => p.trim());
           const temp = parseFloat(parts[0]?.split(":")[1]);
           const press = parseFloat(parts[1]?.split(":")[1]);
           const alt = parseFloat(parts[2]?.split(":")[1]);
           const weather = parts[3];
           const wifiStatus = parts[4]?.includes("Connected");
           const mqttStatus = parts[5]?.includes("Connected");
-          const brokerField = parts.find(p => p.startsWith("Broker:"));
-          const brokerFromPayload = brokerField?.split(":")[1]?.trim();
 
           document.getElementById("temp").innerText = isNaN(temp) ? "--" : `${temp.toFixed(1)} °C`;
           document.getElementById("pressure").innerText = isNaN(press) ? "--" : `${press.toFixed(1)} hPa`;
@@ -308,18 +308,14 @@
           mqttBox.textContent = mqttStatus ? "Device MQTT Connected" : "Device MQTT Disconnected";
           mqttBox.className = mqttStatus ? "status-box status-connected" : "status-box status-disconnected";
 
-          if (brokerFromPayload && brokerFromPayload !== currentBrokerName) {
-            console.log(`Switching broker to: ${brokerFromPayload}`);
-            connectToBrokerByName(brokerFromPayload);
-          }
-        }
-      });
+          updateConnectionStatus(true);
+        });
 
-      client.on('close', () => updateConnectionStatus(false));
-      client.on('offline', () => updateConnectionStatus(false));
+        client.on("close", () => updateConnectionStatus(false));
+      });
     }
 
-    connectToBrokerByName("Mosquitto");
+    setupAllBrokers();
 
     setInterval(() => {
       if (Date.now() - lastSensorMessageTime > SENSOR_TIMEOUT_MS) {
@@ -327,26 +323,42 @@
         document.getElementById("boardWiFiStatus").className = "status-box status-disconnected";
         document.getElementById("boardMQTTStatus").textContent = "Device MQTT Disconnected";
         document.getElementById("boardMQTTStatus").className = "status-box status-disconnected";
+        updateConnectionStatus(false);
+        currentActiveBroker = null;
       }
     }, 5000);
 
     document.getElementById('mqttForm').addEventListener('submit', function (e) {
       e.preventDefault();
       const message = document.getElementById('message').value.trim();
-      if (message && client && client.connected) {
-        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", `${message}`);
+      const activeClient = getActiveClient();
+      if (message && activeClient && activeClient.connected) {
+        activeClient.publish("ece/diFJBNOUIFOVSKJIGWIGJ", message);
         document.getElementById('message').value = "";
+
+        const historyDiv = document.getElementById("messageHistory");
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.innerText = `Sent: ${message}`;
+        historyDiv.appendChild(item);
       } else {
-        alert("Not connected to MQTT broker.");
+        alert("Not connected to any MQTT broker.");
       }
     });
 
     document.getElementById('clearButton').addEventListener('click', () => {
-      if (client && client.connected) {
-        client.publish("ece/diFJBNOUIFOVSKJIGWIGJ", `CLE@R`);
+      const activeClient = getActiveClient();
+      if (activeClient && activeClient.connected) {
+        activeClient.publish("ece/diFJBNOUIFOVSKJIGWIGJ", `CLE@R`);
         document.getElementById('message').value = "";
+
+        const historyDiv = document.getElementById("messageHistory");
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.innerText = `Sent: CLE@R`;
+        historyDiv.appendChild(item);
       } else {
-        alert("Not connected to MQTT broker.");
+        alert("Not connected to any MQTT broker.");
       }
     });
 
